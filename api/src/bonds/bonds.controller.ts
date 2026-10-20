@@ -10,6 +10,7 @@ import { DistributeCouponDto } from './dto/distribute-coupon.dto';
 import { DistributeCouponBatchDto } from './dto/distribute-coupon-batch.dto';
 import { ClaimCreditsDto } from './dto/claim-credits.dto';
 import { TransferBondDto } from './dto/transfer-bond.dto';
+import { RedeemBondDto } from './dto/redeem-bond.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -37,6 +38,7 @@ import {
   SweepUndistributedResponse,
   BondDetailResponse,
   ClaimableCreditsResponse,
+  RedeemResponse,
 } from './interfaces/bond.interface';
 
 
@@ -268,6 +270,20 @@ export class BondsController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<BondResponse> {
     return this.bondsService.mature(id);
+  }
+
+  @Post(':id/redeem')
+  @UseGuards(JwtAuthGuard, KycGuard)
+  @HttpCode(HttpStatus.OK)
+  async redeem(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RedeemBondDto,
+    @Req() req: any,
+  ): Promise<RedeemResponse> {
+    if (req.user?.walletAddress && req.user.walletAddress !== dto.investorAddress) {
+      throw new ForbiddenException('Cannot redeem on behalf of another wallet address');
+    }
+    return this.bondsService.redeem(id, dto);
   }
 
   @Get(':id/export')

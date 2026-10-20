@@ -87,6 +87,14 @@ export interface UndistributedTotalResponse {
   undistributedTotal: string;
 }
 
+export interface RedeemResponse {
+  bondId: number;
+  investorAddress: string;
+  amount: string;
+  transactionHash: string;
+  status?: string;
+}
+
 /**
  * One itemized claimable-credit line (issue #156). Mirrors the coupon-engine
  * `ClaimableCreditDetail` struct: a single period/report/credit-type accrual

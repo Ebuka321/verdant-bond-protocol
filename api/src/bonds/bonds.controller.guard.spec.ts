@@ -115,4 +115,55 @@ describe('BondsController authorization (behavioral)', () => {
       expect(bondsService.create).toHaveBeenCalled();
     });
   });
+
+  describe('POST /bonds/:id/redeem (JWT + KYC)', () => {
+    const validAddress = 'G_VERIFIED_ADDRESS';
+    const body = { amount: 100, investorAddress: validAddress };
+
+    it('rejects anonymous callers', async () => {
+      await request(app.getHttpServer())
+        .post('/bonds/1/redeem')
+        .set('x-test-role', 'anon' as TestRole)
+        .send(body)
+        .expect(401);
+      expect(bondsService.redeem).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-KYC verified callers', async () => {
+      await request(app.getHttpServer())
+        .post('/bonds/1/redeem')
+        .set('x-test-role', 'user' as TestRole)
+        .send(body)
+        .expect(403);
+      expect(bondsService.redeem).not.toHaveBeenCalled();
+    });
+
+    it('rejects verified callers attempting to redeem on behalf of another wallet', async () => {
+      await request(app.getHttpServer())
+        .post('/bonds/1/redeem')
+        .set('x-test-role', 'verified' as TestRole)
+        .send({ amount: 100, investorAddress: 'G_ANOTHER_ADDRESS' })
+        .expect(403);
+      expect(bondsService.redeem).not.toHaveBeenCalled();
+    });
+
+    it('allows verified caller matching investorAddress and calls bondsService.redeem', async () => {
+      mockBondsService.redeem.mockResolvedValue({
+        bondId: 1,
+        investorAddress: validAddress,
+        amount: '100',
+        transactionHash: 'hash',
+        status: 'Redeemed',
+      });
+
+      await request(app.getHttpServer())
+        .post('/bonds/1/redeem')
+        .set('x-test-role', 'verified' as TestRole)
+        .send(body)
+        .expect(200);
+
+      expect(bondsService.redeem).toHaveBeenCalledWith(1, body);
+    });
+  });
 });
+
